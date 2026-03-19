@@ -1,11 +1,35 @@
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
 
-from . import crud, models, schemas
-from .database import SessionLocal, engine
+from .db import models
+from .db.database import engine
+from .routers import imports_router, stats_router, system_router, transactions_router
 
 models.Base.metadata.create_all(bind=engine)
+
+
+def ensure_import_columns_and_indexes() -> None:
+    with engine.begin() as conn:
+        table_info = conn.exec_driver_sql("PRAGMA table_info(transactions)").fetchall()
+        column_names = {row[1] for row in table_info}
+
+        if "source" not in column_names:
+            conn.exec_driver_sql(
+                "ALTER TABLE transactions ADD COLUMN source VARCHAR(30)"
+            )
+
+        if "import_key" not in column_names:
+            conn.exec_driver_sql(
+                "ALTER TABLE transactions ADD COLUMN import_key VARCHAR(64)"
+            )
+
+        conn.exec_driver_sql(
+            "CREATE UNIQUE INDEX IF NOT EXISTS ux_transactions_source_import_key "
+            "ON transactions (source, import_key)"
+        )
+
+
+ensure_import_columns_and_indexes()
 
 app = FastAPI(title="家庭财务小管家 API", version="0.0.1")
 
@@ -17,47 +41,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-@app.get("/health")
-def health_check():
-    return {"status": "ok"}
-
-
-@app.get("/transactions", response_model=list[schemas.TransactionOut])
-def get_transactions(db: Session = Depends(get_db)):
-    return crud.list_transactions(db)
-
-
-@app.post("/transactions", response_model=schemas.TransactionOut)
-def create_transaction(
-    payload: schemas.TransactionCreate, db: Session = Depends(get_db)
-):
-    return crud.create_transaction(db, payload)
-
-
-@app.delete("/transactions/{txn_id}")
-def remove_transaction(txn_id: int, db: Session = Depends(get_db)):
-    deleted = crud.delete_transaction(db, txn_id)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="记录不存在")
-    return {"message": "删除成功"}
-
-
-@app.get("/stats/category/{txn_type}", response_model=list[schemas.CategorySummaryItem])
-def get_category_summary(txn_type: str, db: Session = Depends(get_db)):
-    if txn_type not in {"income", "expense"}:
-        raise HTTPException(status_code=400, detail="txn_type 必须是 income 或 expense")
-    return crud.summary_by_category(db, txn_type)
-
-
-@app.get("/stats/monthly", response_model=list[schemas.MonthlySummaryItem])
-def get_monthly_summary(db: Session = Depends(get_db)):
-    return crud.summary_by_month(db)
+app.include_router(system_router)
+app.include_router(transactions_router)
+app.include_router(stats_router)
+app.include_router(imports_router)

@@ -36,7 +36,7 @@
             </label>
             <label>
               分类
-              <input name="category" placeholder="如：餐饮、工资" required />
+              <select name="category" required></select>
             </label>
             <label>
               金额
@@ -55,6 +55,45 @@
         </form>
       </section>
 
+      <section class="panel ocr-panel">
+        <h2>OCR 导入账单</h2>
+        <p class="hint">上传一张小票/账单图片，识别后可逐条修改备注、金额、分类，再勾选导入多笔记录。</p>
+        <div class="ocr-actions">
+          <input id="ocr-file" type="file" accept="image/*" />
+          <button id="ocr-btn" type="button">识别账单</button>
+          <button id="ocr-import-btn" type="button" class="ghost">导入已勾选</button>
+        </div>
+        <div id="ocr-status" class="ocr-status"></div>
+        <div id="ocr-list" class="ocr-list"></div>
+      </section>
+
+
+      <section class="panel ocr-panel">
+        <h2>支付宝 CSV 导入</h2>
+        <p class="hint">步骤：打开 <a href="https://b.alipay.com/page/mbillexprod/account/detail" target="_blank" rel="noopener">支付宝账务明细</a> 并登录，选择日期区间，在“表格设置”中勾选必须字段，点击“下载全部”-“CSV”。</p>
+        <p class="hint">必须字段：入账时间、支付宝交易号、支付宝流水号、收入（+元）、支出（-元）。</p>
+        <div class="ocr-actions">
+          <input id="alipay-file" type="file" accept=".csv,text/csv" />
+          <button id="alipay-preview-btn" type="button">解析 CSV</button>
+          <button id="alipay-import-btn" type="button" class="ghost">导入已勾选</button>
+        </div>
+        <div id="alipay-status" class="ocr-status"></div>
+        <div id="alipay-list" class="ocr-list"></div>
+      </section>
+
+
+      <section class="panel ocr-panel">
+        <h2>微信 XLSX 导入</h2>
+        <p class="hint">步骤：手机微信打开“我 - 服务 - 钱包 - 账单 - ··· - 下载账单”，选择“用于个人对账”，选定日期区间，导出后上传微信账单 XLSX。</p>
+        <p class="hint">微信账单表头固定且为 XLSX 格式，。</p>
+        <div class="ocr-actions">
+          <input id="wechat-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+          <button id="wechat-preview-btn" type="button">解析 XLSX</button>
+          <button id="wechat-import-btn" type="button" class="ghost">导入已勾选</button>
+        </div>
+        <div id="wechat-status" class="ocr-status"></div>
+        <div id="wechat-list" class="ocr-list"></div>
+      </section>
       <section class="panel list-panel">
         <div class="title-row">
           <h2>收支记录</h2>
@@ -81,3 +120,4 @@
     <script src="./app.js"></script>
   </body>
 </html>
+

@@ -25,11 +25,14 @@ if not exist "%VENV_PY%" (
   python -m venv "%ROOT_DIR%.venv"
 )
 
-"%VENV_PY%" -m pip install -r "%BACKEND_DIR%\requirements.txt"
+uv pip install --python "%VENV_PY%" -r "%BACKEND_DIR%\requirements.txt"
 
 start "HomeFin Backend" cmd /k "cd /d ""%BACKEND_DIR%"" && ""%VENV_PY%"" -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
 
 start "HomeFin Frontend" cmd /k "cd /d ""%FRONTEND_DIR%"" && python -m http.server 5500"
+
+timeout /t 2 /nobreak >nul
+start "" "http://localhost:5500"
 
 echo.
 echo Backend:  http://localhost:8000/docs
