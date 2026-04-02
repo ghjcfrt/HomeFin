@@ -3,7 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .db import models
 from .db.database import engine
-from .routers import imports_router, stats_router, system_router, transactions_router
+from .routers import (
+    backup_router,
+    budgets_router,
+    imports_router,
+    stats_router,
+    system_router,
+    transactions_router,
+)
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -45,3 +52,5 @@ app.include_router(system_router)
 app.include_router(transactions_router)
 app.include_router(stats_router)
 app.include_router(imports_router)
+app.include_router(budgets_router)
+app.include_router(backup_router)

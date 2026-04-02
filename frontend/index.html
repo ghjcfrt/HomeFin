@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./styles.css?v=20260402b" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
@@ -25,6 +25,7 @@
 
       <section class="panel form-panel">
         <h2>新增记录</h2>
+        <p id="form-mode-tip" class="hint">当前为新增模式</p>
         <form id="txn-form">
           <div class="grid">
             <label>
@@ -51,7 +52,10 @@
             备注
             <input name="note" placeholder="可选" />
           </label>
-          <button type="submit">保存记录</button>
+          <div class="form-actions">
+            <button id="submit-btn" type="submit">保存记录</button>
+            <button id="cancel-edit-btn" type="button" class="ghost" style="display: none">取消编辑</button>
+          </div>
         </form>
       </section>
 
@@ -97,9 +101,92 @@
       <section class="panel list-panel">
         <div class="title-row">
           <h2>收支记录</h2>
-          <button id="refresh-btn" class="ghost">刷新</button>
+          <div class="title-actions">
+            <button id="filter-toggle-btn" type="button" class="ghost">筛选</button>
+            <button id="refresh-btn" class="ghost">刷新</button>
+          </div>
+        </div>
+        <div id="filter-popup" class="filter-popup" hidden role="dialog" aria-modal="false" aria-label="记录筛选">
+          <div class="filter-popup-head">
+            <strong>筛选条件</strong>
+            <button id="filter-close-btn" type="button" class="ghost">关闭</button>
+          </div>
+          <div class="filter-grid">
+            <label>开始日期<input id="filter-date-from" type="date" /></label>
+            <label>结束日期<input id="filter-date-to" type="date" /></label>
+            <label>
+              类型
+              <select id="filter-type">
+                <option value="">全部</option>
+                <option value="expense">支出</option>
+                <option value="income">收入</option>
+              </select>
+            </label>
+            <label>
+              分类
+              <select id="filter-category">
+                <option value="">全部</option>
+              </select>
+            </label>
+            <label>最小金额<input id="filter-amount-min" type="number" min="0" step="0.01" /></label>
+            <label>最大金额<input id="filter-amount-max" type="number" min="0" step="0.01" /></label>
+            <label>关键词<input id="filter-keyword" type="text" placeholder="分类或备注" /></label>
+            <label>
+              排序字段
+              <select id="sort-by">
+                <option value="txn_date">交易日期</option>
+                <option value="amount">金额</option>
+                <option value="created_at">创建时间</option>
+                <option value="category">分类</option>
+                <option value="id">ID</option>
+              </select>
+            </label>
+            <label>
+              排序方向
+              <select id="sort-order">
+                <option value="desc">降序</option>
+                <option value="asc">升序</option>
+              </select>
+            </label>
+          </div>
+          <div class="inline-actions">
+            <button id="filter-apply-btn" type="button" class="ghost">应用筛选</button>
+            <button id="filter-reset-btn" type="button" class="ghost">重置筛选</button>
+          </div>
         </div>
         <div id="txn-list" class="txn-list"></div>
+      </section>
+
+      <section class="panel">
+        <h2>预算管理与超支提醒</h2>
+        <div class="filter-grid">
+          <label>预算月份<input id="budget-month" type="month" /></label>
+          <label>月总预算<input id="budget-total" type="number" min="0.01" step="0.01" placeholder="例如 6000" /></label>
+          <label>
+            分类预算
+            <select id="budget-category"></select>
+          </label>
+          <label>分类金额<input id="budget-category-amount" type="number" min="0.01" step="0.01" placeholder="例如 800" /></label>
+        </div>
+        <div class="inline-actions">
+          <button id="budget-save-btn" type="button">保存预算</button>
+          <button id="budget-add-category-btn" type="button" class="ghost">添加/更新分类预算</button>
+          <button id="budget-refresh-btn" type="button" class="ghost">刷新预算状态</button>
+        </div>
+        <div id="budget-status" class="ocr-status"></div>
+        <div id="budget-overview" class="hint"></div>
+        <div id="budget-list" class="ocr-list"></div>
+      </section>
+
+      <section class="panel">
+        <h2>数据备份与恢复</h2>
+        <p class="hint">导出会生成 JSON 备份文件；恢复前请确认文件来源可信，恢复会覆盖现有数据。</p>
+        <div class="inline-actions">
+          <button id="backup-export-btn" type="button">导出备份</button>
+          <input id="backup-file" type="file" accept="application/json,.json" />
+          <button id="backup-restore-btn" type="button" class="ghost">恢复备份</button>
+        </div>
+        <div id="backup-status" class="ocr-status"></div>
       </section>
 
       <section class="panel charts">
@@ -107,17 +194,19 @@
         <div class="chart-grid">
           <article>
             <h3>支出分类占比</h3>
+            <p id="expense-chart-hint" class="hint chart-hint" style="display: none"></p>
             <canvas id="expense-chart"></canvas>
           </article>
           <article>
             <h3>月度收支趋势</h3>
+            <p id="monthly-chart-hint" class="hint chart-hint" style="display: none"></p>
             <canvas id="monthly-chart"></canvas>
           </article>
         </div>
       </section>
     </main>
 
-    <script src="./app.js"></script>
+    <script src="./app.js?v=20260402b"></script>
   </body>
 </html>
 

@@ -9,6 +9,7 @@ from typing import Any
 from xml.etree import ElementTree as ET
 
 from ..core.constants import EXPENSE_CATEGORIES, INCOME_CATEGORIES
+from .import_common import ImportValidationError, make_issue
 
 REQUIRED_HEADERS_DISPLAY = [
     "交易时间",
@@ -60,13 +61,21 @@ def _resolve_first_sheet_path(book_zip: zipfile.ZipFile) -> str:
     workbook = ET.fromstring(book_zip.read("xl/workbook.xml"))
     first_sheet = workbook.find("m:sheets/m:sheet", _XML_NS)
     if first_sheet is None:
-        raise ValueError("XLSX 缺少工作表")
+        raise ImportValidationError(
+            code="WECHAT_XLSX_NO_SHEET",
+            message="XLSX 缺少工作表",
+            field="file",
+        )
 
     rel_id = first_sheet.attrib.get(
         "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
     )
     if not rel_id:
-        raise ValueError("XLSX 工作表引用损坏")
+        raise ImportValidationError(
+            code="WECHAT_XLSX_BAD_RELATION",
+            message="XLSX 工作表引用损坏",
+            field="file",
+        )
 
     rels = ET.fromstring(book_zip.read("xl/_rels/workbook.xml.rels"))
     target = None
@@ -75,7 +84,11 @@ def _resolve_first_sheet_path(book_zip: zipfile.ZipFile) -> str:
             target = rel.attrib.get("Target")
             break
     if not target:
-        raise ValueError("XLSX 工作表关系缺失")
+        raise ImportValidationError(
+            code="WECHAT_XLSX_RELATION_MISSING",
+            message="XLSX 工作表关系缺失",
+            field="file",
+        )
 
     if target.startswith("/"):
         return target.lstrip("/")
@@ -91,9 +104,17 @@ def _extract_rows(content: bytes) -> list[list[str]]:
             shared_strings = _parse_shared_strings(book_zip)
             sheet_root = ET.fromstring(book_zip.read(sheet_path))
     except zipfile.BadZipFile as exc:
-        raise ValueError("文件不是有效的 XLSX 格式") from exc
+        raise ImportValidationError(
+            code="WECHAT_XLSX_INVALID_FILE",
+            message="文件不是有效的 XLSX 格式",
+            field="file",
+        ) from exc
     except KeyError as exc:
-        raise ValueError("XLSX 内容不完整，无法解析") from exc
+        raise ImportValidationError(
+            code="WECHAT_XLSX_INCOMPLETE",
+            message="XLSX 内容不完整，无法解析",
+            field="file",
+        ) from exc
 
     rows: list[list[str]] = []
     for row in sheet_root.findall(".//m:sheetData/m:row", _XML_NS):
@@ -203,10 +224,17 @@ def _infer_category(txn_type: str, text: str) -> str:
     return default_category
 
 
-def parse_wechat_xlsx(content: bytes) -> list[dict[str, Any]]:
+def parse_wechat_xlsx(
+    content: bytes,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     rows = _extract_rows(content)
+    issues: list[dict[str, Any]] = []
     if not rows:
-        raise ValueError("XLSX 内容为空")
+        raise ImportValidationError(
+            code="IMPORT_EMPTY_FILE",
+            message="XLSX 内容为空",
+            field="file",
+        )
 
     required_headers = [
         _normalize_header(header) for header in REQUIRED_HEADERS_DISPLAY
@@ -222,10 +250,14 @@ def parse_wechat_xlsx(content: bytes) -> list[dict[str, Any]]:
             break
 
     if header_index < 0:
-        raise ValueError("未找到微信账单固定表头，请确认使用微信导出的 XLSX 文件")
+        raise ImportValidationError(
+            code="WECHAT_MISSING_HEADERS",
+            message="未找到微信账单固定表头，请确认使用微信导出的 XLSX 文件",
+            field="headers",
+        )
 
     results: list[dict[str, Any]] = []
-    for row in rows[header_index + 1 :]:
+    for row_idx, row in enumerate(rows[header_index + 1 :], start=header_index + 2):
         if not row or all(not str(cell or "").strip() for cell in row):
             continue
 
@@ -235,65 +267,108 @@ def parse_wechat_xlsx(content: bytes) -> list[dict[str, Any]]:
                 return ""
             return str(row[pos] or "").strip()
 
-        status = get_value(_normalize_header("当前状态"))
-        if status and status not in {"支付成功", "已收款"}:
-            continue
+        try:
+            status = get_value(_normalize_header("当前状态"))
+            if status and status not in {"支付成功", "已收款"}:
+                issues.append(
+                    make_issue(
+                        code="WECHAT_ROW_SKIPPED_STATUS",
+                        message=f"交易状态为 {status}，已跳过",
+                        row=row_idx,
+                        field="当前状态",
+                    )
+                )
+                continue
 
-        inout = get_value(_normalize_header("收/支"))
-        if inout not in {"收入", "支出"}:
-            continue
+            inout = get_value(_normalize_header("收/支"))
+            if inout not in {"收入", "支出"}:
+                issues.append(
+                    make_issue(
+                        code="WECHAT_ROW_SKIPPED_INOUT",
+                        message="收/支 字段非法，已跳过",
+                        row=row_idx,
+                        field="收/支",
+                    )
+                )
+                continue
 
-        amount = _parse_amount(get_value(_normalize_header("金额(元)")))
-        if amount <= 0:
-            continue
+            amount = _parse_amount(get_value(_normalize_header("金额(元)")))
+            if amount <= 0:
+                issues.append(
+                    make_issue(
+                        code="WECHAT_ROW_SKIPPED_NO_AMOUNT",
+                        message="金额不大于 0，已跳过",
+                        row=row_idx,
+                        field="金额(元)",
+                    )
+                )
+                continue
 
-        txn_type = "income" if inout == "收入" else "expense"
-        txn_date = _parse_txn_date(get_value(_normalize_header("交易时间")))
-        txn_scene = get_value(_normalize_header("交易类型"))
-        counterparty = get_value(_normalize_header("交易对方"))
-        product = get_value(_normalize_header("商品"))
-        pay_method = get_value(_normalize_header("支付方式"))
-        trade_no = get_value(_normalize_header("交易单号"))
-        merchant_no = get_value(_normalize_header("商户单号"))
-        memo = get_value(_normalize_header("备注"))
+            txn_type = "income" if inout == "收入" else "expense"
+            txn_date = _parse_txn_date(get_value(_normalize_header("交易时间")))
+            txn_scene = get_value(_normalize_header("交易类型"))
+            counterparty = get_value(_normalize_header("交易对方"))
+            product = get_value(_normalize_header("商品"))
+            pay_method = get_value(_normalize_header("支付方式"))
+            trade_no = get_value(_normalize_header("交易单号"))
+            merchant_no = get_value(_normalize_header("商户单号"))
+            memo = get_value(_normalize_header("备注"))
 
-        note_parts = [
-            part
-            for part in [txn_scene, counterparty, product, pay_method, status, memo]
-            if part and part != "/"
-        ]
-        note = " | ".join(note_parts)[:200] if note_parts else None
-
-        category_text = " ".join([txn_scene, counterparty, product, memo])
-        category = _infer_category(txn_type, category_text)
-
-        import_source = "wechat_xlsx"
-        fingerprint = "|".join(
-            [
-                import_source,
-                trade_no,
-                merchant_no,
-                str(txn_date),
-                f"{amount:.2f}",
-                txn_type,
-                counterparty,
-                product,
+            note_parts = [
+                part
+                for part in [txn_scene, counterparty, product, pay_method, status, memo]
+                if part and part != "/"
             ]
-        )
-        import_key = hashlib.sha256(fingerprint.encode("utf-8")).hexdigest()
+            note = " | ".join(note_parts)[:200] if note_parts else None
 
-        results.append(
-            {
-                "selected": True,
-                "type": txn_type,
-                "category": category,
-                "amount": amount,
-                "txn_date": txn_date,
-                "note": note,
-                "external_id": trade_no or merchant_no or import_key[:12],
-                "source": import_source,
-                "import_key": import_key,
-            }
+            category_text = " ".join([txn_scene, counterparty, product, memo])
+            category = _infer_category(txn_type, category_text)
+
+            import_source = "wechat_xlsx"
+            fingerprint = "|".join(
+                [
+                    import_source,
+                    trade_no,
+                    merchant_no,
+                    str(txn_date),
+                    f"{amount:.2f}",
+                    txn_type,
+                    counterparty,
+                    product,
+                ]
+            )
+            import_key = hashlib.sha256(fingerprint.encode("utf-8")).hexdigest()
+
+            results.append(
+                {
+                    "selected": True,
+                    "type": txn_type,
+                    "category": category,
+                    "amount": amount,
+                    "txn_date": txn_date,
+                    "note": note,
+                    "external_id": trade_no or merchant_no or import_key[:12],
+                    "source": import_source,
+                    "import_key": import_key,
+                }
+            )
+        except ValueError as exc:
+            issues.append(
+                make_issue(
+                    code="WECHAT_ROW_PARSE_FAILED",
+                    message=f"第 {row_idx} 行解析失败: {exc}",
+                    severity="error",
+                    row=row_idx,
+                )
+            )
+
+    if not results:
+        issues.append(
+            make_issue(
+                code="WECHAT_NO_VALID_ROWS",
+                message="未解析到可导入记录",
+                severity="error",
+            )
         )
 
-    return results
+    return results, issues
