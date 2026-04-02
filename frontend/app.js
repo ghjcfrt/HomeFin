@@ -1,5 +1,11 @@
 const API_BASE = "http://localhost:8000";
-const CHART_JS_SRC = "https://cdn.jsdelivr.net/npm/chart.js";
+const CHART_JS_CANDIDATES = [
+  { name: "BootCDN", src: "https://cdn.bootcdn.net/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" },
+  { name: "Staticfile", src: "https://cdn.staticfile.org/Chart.js/4.4.1/chart.umd.min.js" },
+  { name: "UNPKG", src: "https://unpkg.com/chart.js@4.4.1/dist/chart.umd.min.js" },
+  { name: "jsDelivr", src: "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" },
+];
+const CHART_JS_TIMEOUT_MS = 4500;
 
 const form = document.getElementById("txn-form");
 const txnList = document.getElementById("txn-list");
@@ -72,6 +78,45 @@ let editingTxnId = null;
 let budgetDraftCategoryMap = {};
 let chartLibraryLoading = null;
 
+function loadScriptWithTimeout(candidate, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    let settled = false;
+
+    const cleanup = () => {
+      script.onload = null;
+      script.onerror = null;
+      clearTimeout(timer);
+    };
+
+    const fail = (message) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      script.remove();
+      reject(new Error(message));
+    };
+
+    const timer = setTimeout(() => {
+      fail(`${candidate.name} 超时`);
+    }, timeoutMs);
+
+    script.src = candidate.src;
+    script.async = true;
+    script.onload = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve();
+    };
+    script.onerror = () => {
+      fail(`${candidate.name} 加载失败`);
+    };
+
+    document.head.appendChild(script);
+  });
+}
+
 function loadChartLibrary() {
   if (typeof window.Chart === "function") {
     return Promise.resolve();
@@ -80,14 +125,23 @@ function loadChartLibrary() {
     return chartLibraryLoading;
   }
 
-  chartLibraryLoading = new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = CHART_JS_SRC;
-    script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("图表库加载失败"));
-    document.head.appendChild(script);
-  });
+  chartLibraryLoading = (async () => {
+    let lastError = null;
+    for (const candidate of CHART_JS_CANDIDATES) {
+      try {
+        await loadScriptWithTimeout(candidate, CHART_JS_TIMEOUT_MS);
+        if (typeof window.Chart === "function") {
+          return;
+        }
+        lastError = new Error(`${candidate.name} 已加载但 Chart 未就绪`);
+      } catch (err) {
+        lastError = err;
+      }
+    }
+
+    const attempted = CHART_JS_CANDIDATES.map((x) => x.name).join(" / ");
+    throw new Error(`图表库加载失败（已尝试：${attempted}）${lastError ? `：${lastError.message}` : ""}`);
+  })();
 
   return chartLibraryLoading;
 }
@@ -1072,9 +1126,9 @@ async function bootstrap() {
   setTimeout(() => {
     loadChartLibrary()
       .then(() => refreshAll())
-      .catch(() => {
-        expenseChartHint.textContent = "图表库加载失败，当前使用离线绘图模式（需要梯子）";
-        monthlyChartHint.textContent = "图表库加载失败，当前使用离线绘图模式（需要梯子）";
+      .catch((err) => {
+        expenseChartHint.textContent = `${err.message}，当前使用离线绘图模式,请检查浏览器侧规则是否阻止了图表库的加载`;
+        monthlyChartHint.textContent = `${err.message}，当前使用离线绘图模式,请检查浏览器侧规则是否阻止了图表库的加载`;
       });
   }, 0);
 }
