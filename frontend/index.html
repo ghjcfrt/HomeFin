@@ -4,14 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>家庭财务小管家</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap"
-      rel="stylesheet"
-    />
     <link rel="stylesheet" href="./styles.css?v=20260402b" />
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
     <div class="bg-shape one"></div>
@@ -181,7 +174,7 @@
       <section class="panel">
         <h2>数据备份与恢复</h2>
         <p class="hint">导出会生成 JSON 备份文件；恢复前请确认文件来源可信，恢复会覆盖现有数据。</p>
-        <div class="inline-actions">
+        <div class="inline-actions backup-actions">
           <button id="backup-export-btn" type="button">导出备份</button>
           <input id="backup-file" type="file" accept="application/json,.json" />
           <button id="backup-restore-btn" type="button" class="ghost">恢复备份</button>
@@ -194,13 +187,13 @@
         <div class="chart-grid">
           <article>
             <h3>支出分类占比</h3>
-            <p id="expense-chart-hint" class="hint chart-hint" style="display: none"></p>
-            <canvas id="expense-chart"></canvas>
+            <p id="expense-chart-hint" class="hint chart-hint" aria-live="polite"></p>
+            <canvas id="expense-chart" width="520" height="300"></canvas>
           </article>
           <article>
             <h3>月度收支趋势</h3>
-            <p id="monthly-chart-hint" class="hint chart-hint" style="display: none"></p>
-            <canvas id="monthly-chart"></canvas>
+            <p id="monthly-chart-hint" class="hint chart-hint" aria-live="polite"></p>
+            <canvas id="monthly-chart" width="520" height="300"></canvas>
           </article>
         </div>
       </section>

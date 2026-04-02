@@ -15,7 +15,7 @@
 
 body {
   margin: 0;
-  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-family: "Segoe UI", "Microsoft YaHei UI", "PingFang SC", sans-serif;
   color: var(--ink);
   background: radial-gradient(circle at 18% 8%, #d9fff1, transparent 38%),
     radial-gradient(circle at 88% 18%, #ffe9d9, transparent 32%),
@@ -54,7 +54,6 @@ body {
 
 header {
   margin-bottom: 18px;
-  animation: fade-up 0.6s ease;
 }
 
 h1 {
@@ -74,19 +73,6 @@ header p {
   padding: 16px;
   backdrop-filter: blur(6px);
   margin-bottom: 16px;
-  animation: fade-up 0.55s ease;
-}
-
-.form-panel {
-  animation-delay: 0.08s;
-}
-
-.list-panel {
-  animation-delay: 0.16s;
-}
-
-.charts {
-  animation-delay: 0.24s;
 }
 
 h2 {
@@ -204,10 +190,15 @@ button:hover {
   margin-bottom: 10px;
 }
 
+.backup-actions {
+  margin-top: 12px;
+}
+
 .hint {
   margin: 0;
   color: var(--ink-soft);
   font-size: 0.9rem;
+  min-height: 1.3em;
 }
 
 .ocr-actions {
@@ -216,16 +207,66 @@ button:hover {
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
+  min-height: 40px;
+}
+
+.ocr-actions > *,
+.inline-actions > * {
+  align-self: center;
+}
+
+.ocr-actions button,
+.inline-actions button {
+  margin: 0;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ocr-actions input[type="file"],
+.inline-actions input[type="file"] {
+  height: 40px;
+  line-height: 38px;
+  padding: 0 10px;
+  vertical-align: middle;
+}
+
+.ocr-actions input[type="file"]::file-selector-button,
+.inline-actions input[type="file"]::file-selector-button {
+  height: 30px;
+  line-height: 28px;
+  margin-top: 4px;
+  margin-bottom: 4px;
+  margin-right: 10px;
+  vertical-align: middle;
+}
+
+.ocr-actions input[type="file"]::-webkit-file-upload-button,
+.inline-actions input[type="file"]::-webkit-file-upload-button {
+  height: 30px;
+  line-height: 28px;
+  margin-top: 4px;
+  margin-bottom: 4px;
+  margin-right: 10px;
+  vertical-align: middle;
 }
 
 .ocr-status {
   margin: 10px 0;
   color: var(--ink-soft);
   font-size: 0.9rem;
+  min-height: 1.3em;
 }
 
 .ocr-list {
   overflow-x: auto;
+  min-height: 44px;
+}
+
+.ocr-list .empty-hint {
+  min-height: 0;
+  padding: 4px 2px;
 }
 
 .ocr-table {
@@ -272,6 +313,10 @@ button:hover {
 .txn-list {
   display: grid;
   gap: 8px;
+  min-height: 340px;
+  max-height: 62vh;
+  overflow: auto;
+  align-content: start;
 }
 
 .txn-item {
@@ -358,6 +403,7 @@ button:hover {
   padding: 12px;
   width: min(100%, 520px);
   justify-self: center;
+  min-height: 360px;
 }
 
 .chart-grid article:nth-child(2) {
@@ -369,10 +415,13 @@ button:hover {
 .chart-hint {
   margin-bottom: 8px;
   color: #4f6670;
+  min-height: 1.3em;
 }
 
 .chart-grid canvas {
+  display: block;
   width: 100% !important;
+  height: 300px !important;
   max-height: 300px;
 }
 

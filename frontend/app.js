@@ -1,4 +1,5 @@
 const API_BASE = "http://localhost:8000";
+const CHART_JS_SRC = "https://cdn.jsdelivr.net/npm/chart.js";
 
 const form = document.getElementById("txn-form");
 const txnList = document.getElementById("txn-list");
@@ -69,6 +70,27 @@ let alipayCandidates = [];
 let wechatCandidates = [];
 let editingTxnId = null;
 let budgetDraftCategoryMap = {};
+let chartLibraryLoading = null;
+
+function loadChartLibrary() {
+  if (typeof window.Chart === "function") {
+    return Promise.resolve();
+  }
+  if (chartLibraryLoading) {
+    return chartLibraryLoading;
+  }
+
+  chartLibraryLoading = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = CHART_JS_SRC;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("图表库加载失败"));
+    document.head.appendChild(script);
+  });
+
+  return chartLibraryLoading;
+}
 
 async function request(path, options = {}) {
   const headers = { ...(options.headers || {}) };
@@ -253,8 +275,6 @@ function prepareCanvas(canvas, preferredHeight = 280) {
 
   canvas.width = Math.floor(width * dpr);
   canvas.height = Math.floor(height * dpr);
-  canvas.style.width = `${width}px`;
-  canvas.style.height = `${height}px`;
 
   const ctx = canvas.getContext("2d");
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -393,14 +413,11 @@ function renderExpenseChart(data) {
   const ctx = document.getElementById("expense-chart");
   if (typeof window.Chart !== "function") {
     expenseChartHint.textContent = "当前为离线绘图模式";
-    expenseChartHint.style.display = "block";
-    ctx.style.display = "block";
     drawFallbackDonut(ctx, data || []);
     return;
   }
 
-  expenseChartHint.style.display = "none";
-  ctx.style.display = "block";
+  expenseChartHint.textContent = "";
 
   const labels = data.map((x) => x.category);
   const values = data.map((x) => x.total);
@@ -420,9 +437,7 @@ function renderExpenseChart(data) {
       },
     });
   } catch (err) {
-    ctx.style.display = "block";
     expenseChartHint.textContent = `图表渲染失败，已切换离线模式：${err.message}`;
-    expenseChartHint.style.display = "block";
     drawFallbackDonut(ctx, data || []);
   }
 }
@@ -431,14 +446,11 @@ function renderMonthlyChart(data) {
   const ctx = document.getElementById("monthly-chart");
   if (typeof window.Chart !== "function") {
     monthlyChartHint.textContent = "当前为离线绘图模式";
-    monthlyChartHint.style.display = "block";
-    ctx.style.display = "block";
     drawFallbackBars(ctx, data || []);
     return;
   }
 
-  monthlyChartHint.style.display = "none";
-  ctx.style.display = "block";
+  monthlyChartHint.textContent = "";
 
   const labels = data.map((x) => x.month);
 
@@ -462,9 +474,7 @@ function renderMonthlyChart(data) {
       },
     });
   } catch (err) {
-    ctx.style.display = "block";
     monthlyChartHint.textContent = `图表渲染失败，已切换离线模式：${err.message}`;
-    monthlyChartHint.style.display = "block";
     drawFallbackBars(ctx, data || []);
   }
 }
@@ -505,7 +515,7 @@ function bindCandidateTable(container, candidates) {
 function renderCandidateTable(container, candidates, idTitle) {
   container.innerHTML = "";
   if (!candidates.length) {
-    container.innerHTML = "<p class='hint'>暂无可导入记录。</p>";
+    container.innerHTML = "<p class='hint empty-hint'>暂无可导入记录。</p>";
     return;
   }
 
@@ -956,13 +966,11 @@ async function refreshAll() {
     renderExpenseChart(expenseStats);
   } catch (err) {
     expenseChartHint.textContent = `图表渲染失败：${err.message}`;
-    expenseChartHint.style.display = "block";
   }
   try {
     renderMonthlyChart(monthlyStats);
   } catch (err) {
     monthlyChartHint.textContent = `图表渲染失败：${err.message}`;
-    monthlyChartHint.style.display = "block";
   }
 }
 
@@ -1059,6 +1067,16 @@ async function bootstrap() {
   renderWechatList();
   await refreshAll();
   await loadBudgetStatus();
+
+  // 首屏内容渲染完成后再加载图表库，避免阻塞 LCP。
+  setTimeout(() => {
+    loadChartLibrary()
+      .then(() => refreshAll())
+      .catch(() => {
+        expenseChartHint.textContent = "图表库加载失败，当前使用离线绘图模式（需要梯子）";
+        monthlyChartHint.textContent = "图表库加载失败，当前使用离线绘图模式（需要梯子）";
+      });
+  }, 0);
 }
 
 bootstrap().catch((err) => {
