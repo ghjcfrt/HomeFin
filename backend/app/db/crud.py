@@ -201,20 +201,24 @@ def summary_by_month(db: Session):
     Returns:
         list[dict]: 月份汇总结果。
     """
+    income_expr = func.sum(
+        case(
+            (models.Transaction.type == "income", models.Transaction.amount),
+            else_=0,
+        )
+    )
+    expense_expr = func.sum(
+        case(
+            (models.Transaction.type == "expense", models.Transaction.amount),
+            else_=0,
+        )
+    )
+
     query = db.query(
         func.strftime("%Y-%m", models.Transaction.txn_date).label("month"),
-        func.sum(
-            case(
-                (models.Transaction.type == "income", models.Transaction.amount),
-                else_=0,
-            )
-        ).label("income"),
-        func.sum(
-            case(
-                (models.Transaction.type == "expense", models.Transaction.amount),
-                else_=0,
-            )
-        ).label("expense"),
+        income_expr.label("income"),
+        expense_expr.label("expense"),
+        (income_expr - expense_expr).label("balance"),
     ).group_by("month")
     return query.all()
 
