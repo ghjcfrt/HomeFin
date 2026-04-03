@@ -1,3 +1,9 @@
+"""
+OCR 识别与金额日期提取服务。
+
+此模块提供了 OCR 识别功能，并从文本中提取金额和日期。
+"""
+
 from __future__ import annotations
 
 import io
@@ -11,9 +17,11 @@ from PIL import Image
 
 from ..core.constants import EXPENSE_CATEGORIES, INCOME_CATEGORIES
 
+# 正则表达式用于匹配金额和日期
 _AMOUNT_RE = re.compile(r"(?<!\d)(\d+(?:\.\d{1,2})?)(?!\d)")
 _DATE_RE = re.compile(r"(20\d{2})[\-/年\.](\d{1,2})[\-/月\.](\d{1,2})")
 
+# 定义关键词字典
 _INCOME_KEYWORDS = {
     "工资": "工资",
     "薪资": "工资",
@@ -26,6 +34,7 @@ _INCOME_KEYWORDS = {
     "红包": "红包",
 }
 
+# 定义关键词字典
 _EXPENSE_KEYWORDS = {
     "餐": "餐饮",
     "外卖": "餐饮",
@@ -53,18 +62,30 @@ _EXPENSE_KEYWORDS = {
     "酒店": "旅行",
 }
 
+# 用于过滤掉这些无关金额的文本行
 _IGNORE_LINE_WORDS = {"小计", "合计", "总计", "订单号", "交易单号", "流水号"}
 
 
+# 从识别结果中提取交易记录的相关信息，包括交易类型、分类、金额、日期和备注等
 @lru_cache(maxsize=1)
 def _get_ocr_engine():
-    # Lazy import keeps app startup fast and allows graceful failure when OCR deps are missing.
+    # 使用 LRU 缓存装饰器缓存 OCR 引擎实例，避免重复创建，提高性能
     from rapidocr_onnxruntime import RapidOCR
 
     return RapidOCR()
 
 
+# 提取日期
 def _extract_date(raw_text: str) -> date:
+    """
+    从文本中提取日期。
+
+    Args:
+        raw_text (str): 原始文本。
+
+    Returns:
+        date: 提取的日期。
+    """
     match = _DATE_RE.search(raw_text)
     if not match:
         return date.today()
@@ -75,6 +96,7 @@ def _extract_date(raw_text: str) -> date:
         return date.today()
 
 
+# 提取金额
 def _pick_amount(text: str) -> float | None:
     matches = _AMOUNT_RE.findall(text)
     if not matches:
@@ -87,6 +109,7 @@ def _pick_amount(text: str) -> float | None:
     return valid[-1]
 
 
+# 根据文本内容推断交易类型和分类
 def _infer_type_and_category(text: str) -> tuple[str, str]:
     lowered = text.lower()
 
@@ -104,24 +127,30 @@ def _infer_type_and_category(text: str) -> tuple[str, str]:
     return "expense", "其他支出"
 
 
+# 清理备注文本
 def _clean_note(text: str) -> str:
     text = re.sub(r"\s+", " ", text).strip()
     return text[:200]
 
 
+# 判断文本行是否可以忽略
 def _is_ignorable_line(text: str) -> bool:
     if len(text.strip()) < 2:
         return True
     return any(word in text for word in _IGNORE_LINE_WORDS)
 
 
+# 主函数：运行 OCR 识别并提取交易信息
 def run_ocr(image_bytes: bytes) -> dict[str, Any]:
+    # 将字节流转换为 PIL 图像对象，并确保图像是 RGB 模式
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     image_np = np.array(image)
 
+    # 获取 OCR 引擎实例，并运行 OCR 识别，获取识别结果
     ocr_engine = _get_ocr_engine()
     result, _ = ocr_engine(image_np)
 
+    # 从 OCR 识别结果中提取文本行，并从中提取金额、日期、交易类型、分类和备注等信息，构建候选交易记录列表
     lines: list[str] = []
     if result:
         for item in result:
@@ -129,9 +158,11 @@ def run_ocr(image_bytes: bytes) -> dict[str, Any]:
             if text:
                 lines.append(str(text))
 
+    # 将提取的文本行连接成原始文本，并从中提取日期
     raw_text = "\n".join(lines)
     txn_date = _extract_date(raw_text)
 
+    # 遍历文本行，过滤掉无关行，并从中提取金额、交易类型、分类和备注等信息，构建候选交易记录列表，去重后返回最终结果
     candidates = []
     seen = set()
     for line in lines:
@@ -142,6 +173,7 @@ def run_ocr(image_bytes: bytes) -> dict[str, Any]:
         if amount is None:
             continue
 
+        # 根据文本内容推断交易类型和分类，并清理备注信息，构建一个唯一键用于去重，如果该键已经存在于 seen 集合中，则跳过，否则添加到 seen 集合中，并将提取的信息添加到候选交易记录列表中
         txn_type, category = _infer_type_and_category(line)
         note = _clean_note(line)
         key = (txn_type, category, amount, note)

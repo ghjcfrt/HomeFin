@@ -1,3 +1,5 @@
+"""路由聚合导出。"""
+
 from .backup import router as backup_router
 from .budgets import router as budgets_router
 from .imports import router as imports_router

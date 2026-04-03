@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- 家庭财务小管家前端页面结构 -->
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
@@ -10,12 +11,14 @@
     <div class="bg-shape one"></div>
     <div class="bg-shape two"></div>
 
+    <!-- 主内容容器：录入、筛选、统计、列表 -->
     <main class="container">
       <header>
         <h1>家庭财务小管家</h1>
         <p>记录每一笔，掌握每个月</p>
       </header>
 
+      <!-- 新增记录表单模块 -->
       <section class="panel form-panel">
         <h2>新增记录</h2>
         <p id="form-mode-tip" class="hint">当前为新增模式</p>
@@ -52,6 +55,7 @@
         </form>
       </section>
 
+      <!-- OCR 账单导入模块 -->
       <section class="panel ocr-panel">
         <h2>OCR 导入账单</h2>
         <p class="hint">上传一张小票/账单图片，识别后可逐条修改备注、金额、分类，再勾选导入多笔记录。</p>
@@ -65,6 +69,7 @@
       </section>
 
 
+      <!-- 支付宝 CSV 导入模块 -->
       <section class="panel ocr-panel">
         <h2>支付宝 CSV 导入</h2>
         <p class="hint">步骤：打开 <a href="https://b.alipay.com/page/mbillexprod/account/detail" target="_blank" rel="noopener">支付宝账务明细</a> 并登录，选择日期区间，在“表格设置”中勾选必须字段，点击“下载全部”-“CSV”。</p>
@@ -79,6 +84,7 @@
       </section>
 
 
+      <!-- 微信 XLSX 导入模块 -->
       <section class="panel ocr-panel">
         <h2>微信 XLSX 导入</h2>
         <p class="hint">步骤：手机微信打开“我 - 服务 - 钱包 - 账单 - ··· - 下载账单”，选择“用于个人对账”，选定日期区间，导出后上传微信账单 XLSX。</p>
@@ -91,6 +97,7 @@
         <div id="wechat-status" class="ocr-status"></div>
         <div id="wechat-list" class="ocr-list"></div>
       </section>
+      <!-- 收支记录列表与筛选模块 -->
       <section class="panel list-panel">
         <div class="title-row">
           <h2>收支记录</h2>
@@ -150,6 +157,7 @@
         <div id="txn-list" class="txn-list"></div>
       </section>
 
+      <!-- 预算管理与超支提醒模块 -->
       <section class="panel">
         <h2>预算管理与超支提醒</h2>
         <div class="filter-grid">
@@ -171,6 +179,7 @@
         <div id="budget-list" class="ocr-list"></div>
       </section>
 
+      <!-- 数据备份与恢复模块 -->
       <section class="panel">
         <h2>数据备份与恢复</h2>
         <p class="hint">导出会生成 JSON 备份文件；恢复前请确认文件来源可信，恢复会覆盖现有数据。</p>
@@ -182,6 +191,7 @@
         <div id="backup-status" class="ocr-status"></div>
       </section>
 
+      <!-- 图表统计模块 -->
       <section class="panel charts">
         <h2>图表统计</h2>
         <div class="chart-grid">

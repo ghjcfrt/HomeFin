@@ -1,3 +1,6 @@
+"""系统使用的收入与支出分类常量。"""
+
+# 收入分类列表
 INCOME_CATEGORIES = [
     "工资",
     "奖金",
@@ -7,6 +10,7 @@ INCOME_CATEGORIES = [
     "其他收入",
 ]
 
+# 支出分类列表
 EXPENSE_CATEGORIES = [
     "餐饮",
     "交通",

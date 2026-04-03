@@ -1,3 +1,4 @@
+/* 页面主题变量与基础样式定义 */
 :root {
   --bg-1: #f4f7fb;
   --bg-2: #eefcf7;
@@ -9,10 +10,12 @@
   --accent-2: #ff8f3d;
 }
 
+/* 全局盒模型与基础设置 */
 * {
   box-sizing: border-box;
 }
 
+/* 页面背景与字体 */
 body {
   margin: 0;
   font-family: "Segoe UI", "Microsoft YaHei UI", "PingFang SC", sans-serif;
@@ -23,6 +26,7 @@ body {
   min-height: 100vh;
 }
 
+/* 背景装饰图形 */
 .bg-shape {
   position: fixed;
   pointer-events: none;
@@ -47,11 +51,13 @@ body {
   bottom: -80px;
 }
 
+/* 主内容容器 */
 .container {
   width: min(1100px, 94vw);
   margin: 24px auto 36px;
 }
 
+/* 顶部标题区 */
 header {
   margin-bottom: 18px;
 }
@@ -66,6 +72,7 @@ header p {
   color: var(--ink-soft);
 }
 
+/* 卡片面板通用样式 */
 .panel {
   background: var(--card);
   border: 1px solid var(--line);
@@ -80,12 +87,14 @@ h2 {
   font-size: 1.2rem;
 }
 
+/* 表单网格布局 */
 .grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
 }
 
+/* 表单标签 */
 label {
   display: flex;
   flex-direction: column;
@@ -93,6 +102,7 @@ label {
   font-size: 0.92rem;
 }
 
+/* 表单控件与按钮基础 */
 input,
 select,
 textarea,
@@ -114,6 +124,7 @@ textarea {
   min-height: 68px;
 }
 
+/* 主按钮样式 */
 button {
   margin-top: 12px;
   border: none;
@@ -130,12 +141,14 @@ button:hover {
   transform: translateY(-1px);
 }
 
+/* 表单操作按钮区 */
 .form-actions {
   display: flex;
   gap: 8px;
   margin-top: 12px;
 }
 
+/* 次要按钮（白底） */
 .ghost {
   margin: 0;
   background: #fff;
@@ -144,6 +157,7 @@ button:hover {
   font-weight: 600;
 }
 
+/* 列表标题行 */
 .title-row {
   display: flex;
   justify-content: space-between;
@@ -155,6 +169,7 @@ button:hover {
   gap: 8px;
 }
 
+/* 筛选条件网格布局 */
 .filter-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -162,6 +177,7 @@ button:hover {
   margin-bottom: 10px;
 }
 
+/* 筛选弹窗 */
 .filter-popup {
   position: relative;
   margin: 10px 0 14px;
@@ -182,6 +198,7 @@ button:hover {
   margin-bottom: 10px;
 }
 
+/* 行内操作按钮区 */
 .inline-actions {
   display: flex;
   gap: 8px;
@@ -190,10 +207,12 @@ button:hover {
   margin-bottom: 10px;
 }
 
+/* 备份操作区 */
 .backup-actions {
   margin-top: 12px;
 }
 
+/* 辅助提示文字 */
 .hint {
   margin: 0;
   color: var(--ink-soft);
@@ -201,6 +220,7 @@ button:hover {
   min-height: 1.3em;
 }
 
+/* OCR/导入操作区 */
 .ocr-actions {
   margin-top: 12px;
   display: flex;
@@ -252,6 +272,7 @@ button:hover {
   vertical-align: middle;
 }
 
+/* OCR/导入状态提示 */
 .ocr-status {
   margin: 10px 0;
   color: var(--ink-soft);
@@ -259,6 +280,7 @@ button:hover {
   min-height: 1.3em;
 }
 
+/* OCR/导入列表区 */
 .ocr-list {
   overflow-x: auto;
   min-height: 44px;
@@ -269,6 +291,7 @@ button:hover {
   padding: 4px 2px;
 }
 
+/* OCR/导入表格样式 */
 .ocr-table {
   width: 100%;
   border-collapse: collapse;
@@ -310,6 +333,7 @@ button:hover {
   min-height: 72px;
 }
 
+/* 收支记录列表区 */
 .txn-list {
   display: grid;
   gap: 8px;
@@ -319,6 +343,7 @@ button:hover {
   align-content: start;
 }
 
+/* 单条收支记录卡片 */
 .txn-item {
   background: #fff;
   border: 1px solid var(--line);
@@ -330,6 +355,7 @@ button:hover {
   align-items: center;
 }
 
+/* 收入/支出类型徽章 */
 .badge {
   display: inline-block;
   padding: 4px 10px;
@@ -350,6 +376,7 @@ button:hover {
   color: #c06310;
 }
 
+/* 金额显示样式 */
 .amount {
   font-weight: 700;
   text-align: right;
@@ -363,11 +390,13 @@ button:hover {
   border: 1px solid rgba(159, 45, 45, 0.2);
 }
 
+/* 列表操作按钮区 */
 .actions {
   display: flex;
   gap: 6px;
 }
 
+/* 预算状态标签样式 */
 .level {
   display: inline-block;
   padding: 2px 8px;
@@ -390,6 +419,7 @@ button:hover {
   color: #9f2d2d;
 }
 
+/* 图表区网格布局 */
 .chart-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -412,6 +442,7 @@ button:hover {
   min-height: 360px;
 }
 
+/* 图表下方提示 */
 .chart-hint {
   margin-bottom: 8px;
   color: #4f6670;
@@ -431,6 +462,7 @@ button:hover {
   margin-bottom: 0;
 }
 
+/* 动画：淡入上移 */
 @keyframes fade-up {
   from {
     opacity: 0;
@@ -442,6 +474,7 @@ button:hover {
   }
 }
 
+/* 响应式布局适配 */
 @media (max-width: 900px) {
   .grid {
     grid-template-columns: repeat(2, 1fr);

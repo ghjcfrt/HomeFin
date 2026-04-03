@@ -1,3 +1,8 @@
+// 前端主逻辑：请求后端 API、管理表单状态、渲染列表与图表。
+
+// =====================
+// 常量定义与全局变量
+// =====================
 const API_BASE = "http://localhost:8000";
 const CHART_JS_CANDIDATES = [
   { name: "BootCDN", src: "https://cdn.bootcdn.net/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" },
@@ -7,6 +12,7 @@ const CHART_JS_CANDIDATES = [
 ];
 const CHART_JS_TIMEOUT_MS = 4500;
 
+// 页面核心节点缓存，避免重复查询 DOM。
 const form = document.getElementById("txn-form");
 const txnList = document.getElementById("txn-list");
 const refreshBtn = document.getElementById("refresh-btn");
@@ -68,6 +74,9 @@ const wechatImportBtn = document.getElementById("wechat-import-btn");
 const wechatStatus = document.getElementById("wechat-status");
 const wechatList = document.getElementById("wechat-list");
 
+// =====================
+// 全局状态变量
+// =====================
 let expenseChart;
 let monthlyChart;
 let categoryOptions = { income: [], expense: [] };
@@ -78,6 +87,7 @@ let editingTxnId = null;
 let budgetDraftCategoryMap = {};
 let chartLibraryLoading = null;
 
+// 加载外部脚本（带超时）
 function loadScriptWithTimeout(candidate, timeoutMs) {
   return new Promise((resolve, reject) => {
     const script = document.createElement("script");
@@ -117,6 +127,7 @@ function loadScriptWithTimeout(candidate, timeoutMs) {
   });
 }
 
+// 动态加载 Chart.js 库
 function loadChartLibrary() {
   if (typeof window.Chart === "function") {
     return Promise.resolve();
@@ -146,6 +157,7 @@ function loadChartLibrary() {
   return chartLibraryLoading;
 }
 
+// 封装 fetch 请求
 async function request(path, options = {}) {
   const headers = { ...(options.headers || {}) };
   const isFormData = options.body instanceof FormData;
@@ -179,19 +191,23 @@ async function request(path, options = {}) {
   return resp.json();
 }
 
+// 金额格式化
 function formatCurrency(value, type) {
   const symbol = type === "income" ? "+" : "-";
   return `${symbol}￥${Number(value).toFixed(2)}`;
 }
 
+// 获取当前日期
 function getCurrentDate() {
   return new Date().toISOString().slice(0, 10);
 }
 
+// 获取当前月份
 function getCurrentMonth() {
   return new Date().toISOString().slice(0, 7);
 }
 
+// 构建查询参数
 function buildQuery(params) {
   const query = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
@@ -202,10 +218,12 @@ function buildQuery(params) {
   return qs ? `?${qs}` : "";
 }
 
+// 根据类型获取分类
 function getCategoryOptionsByType(txnType) {
   return txnType === "income" ? categoryOptions.income : categoryOptions.expense;
 }
 
+// 填充分类下拉框
 function fillCategorySelect(selectEl, txnType, selectedCategory) {
   const options = getCategoryOptionsByType(txnType);
   const fallback = txnType === "income" ? "其他收入" : "其他支出";
@@ -229,6 +247,7 @@ function fillCategorySelect(selectEl, txnType, selectedCategory) {
   selectEl.value = finalCategory;
 }
 
+// 填充筛选分类下拉框
 function fillFilterCategorySelect() {
   const all = [...categoryOptions.expense, ...categoryOptions.income];
   const unique = [...new Set(all)];
@@ -241,6 +260,7 @@ function fillFilterCategorySelect() {
   });
 }
 
+// 填充预算分类下拉框
 function fillBudgetCategorySelect() {
   budgetCategorySelect.innerHTML = "";
   categoryOptions.expense.forEach((category) => {
@@ -251,6 +271,7 @@ function fillBudgetCategorySelect() {
   });
 }
 
+// 进入编辑模式
 function enterEditMode(item) {
   editingTxnId = item.id;
   formModeTip.textContent = `当前为编辑模式：ID ${item.id}`;
@@ -264,6 +285,7 @@ function enterEditMode(item) {
   form.elements.note.value = item.note || "";
 }
 
+// 退出编辑模式
 function exitEditMode() {
   editingTxnId = null;
   formModeTip.textContent = "当前为新增模式";
@@ -277,6 +299,7 @@ function exitEditMode() {
   form.elements.txn_date.value = getCurrentDate();
 }
 
+// 渲染收支记录列表
 function renderList(items) {
   txnList.innerHTML = "";
 
@@ -321,6 +344,7 @@ function renderList(items) {
   });
 }
 
+// 画布准备
 function prepareCanvas(canvas, preferredHeight = 280) {
   const rect = canvas.getBoundingClientRect();
   const width = Math.max(320, Math.floor(rect.width || canvas.parentElement?.clientWidth || 420));
@@ -336,6 +360,7 @@ function prepareCanvas(canvas, preferredHeight = 280) {
   return { ctx, width, height };
 }
 
+// 绘制 Fallback 环形图
 function drawFallbackDonut(canvas, data) {
   const { ctx, width, height } = prepareCanvas(canvas, 280);
   const values = data.map((x) => Number(x.total || 0)).filter((v) => v > 0);
@@ -393,6 +418,7 @@ function drawFallbackDonut(canvas, data) {
   });
 }
 
+// 绘制 Fallback 柱状图
 function drawFallbackBars(canvas, data) {
   const { ctx, width, height } = prepareCanvas(canvas, 300);
 
@@ -463,6 +489,7 @@ function drawFallbackBars(canvas, data) {
   ctx.fillText("支出", width - 60, 17);
 }
 
+// 渲染支出分类占比图
 function renderExpenseChart(data) {
   const ctx = document.getElementById("expense-chart");
   if (typeof window.Chart !== "function") {
@@ -496,6 +523,7 @@ function renderExpenseChart(data) {
   }
 }
 
+// 渲染月度收支趋势图
 function renderMonthlyChart(data) {
   const ctx = document.getElementById("monthly-chart");
   if (typeof window.Chart !== "function") {
@@ -533,6 +561,7 @@ function renderMonthlyChart(data) {
   }
 }
 
+// 格式化问题文本
 function formatIssueText(issues) {
   if (!issues?.length) return "";
   const errorCount = issues.filter((x) => x.severity === "error").length;
@@ -540,6 +569,7 @@ function formatIssueText(issues) {
   return `，异常 ${issues.length} 条（错误 ${errorCount}，警告 ${warnCount}）`;
 }
 
+// 绑定候选项表格事件
 function bindCandidateTable(container, candidates) {
   container.querySelectorAll("[data-field]").forEach((el) => {
     el.addEventListener("change", (e) => {
@@ -566,6 +596,7 @@ function bindCandidateTable(container, candidates) {
   });
 }
 
+// 渲染候选项表格
 function renderCandidateTable(container, candidates, idTitle) {
   container.innerHTML = "";
   if (!candidates.length) {
@@ -617,18 +648,22 @@ function renderCandidateTable(container, candidates, idTitle) {
   bindCandidateTable(container, candidates);
 }
 
+// 渲染 OCR 识别结果
 function renderOCRList() {
   renderCandidateTable(ocrList, ocrCandidates, "来源");
 }
 
+// 渲染支付宝导入预览
 function renderAlipayList() {
   renderCandidateTable(alipayList, alipayCandidates, "支付宝交易号");
 }
 
+// 渲染微信导入预览
 function renderWechatList() {
   renderCandidateTable(wechatList, wechatCandidates, "微信交易单号");
 }
 
+// 识别 OCR 预览
 async function runOCRPreview() {
   const file = ocrFileInput.files?.[0];
   if (!file) {
@@ -668,6 +703,7 @@ async function runOCRPreview() {
   }
 }
 
+// 解析支付宝 CSV 预览
 async function runAlipayPreview() {
   const file = alipayFileInput.files?.[0];
   if (!file) {
@@ -703,6 +739,7 @@ async function runAlipayPreview() {
   }
 }
 
+// 解析微信 XLSX 预览
 async function runWechatPreview() {
   const file = wechatFileInput.files?.[0];
   if (!file) {
@@ -738,6 +775,7 @@ async function runWechatPreview() {
   }
 }
 
+// 导入已勾选 OCR 记录
 async function importSelectedOCRItems() {
   const selectedItems = ocrCandidates
     .filter((item) => item.selected)
@@ -766,6 +804,7 @@ async function importSelectedOCRItems() {
   await refreshAll();
 }
 
+// 导入已勾选支付宝记录
 async function importSelectedAlipayItems() {
   const selectedItems = alipayCandidates
     .filter((item) => item.selected)
@@ -798,6 +837,7 @@ async function importSelectedAlipayItems() {
   await refreshAll();
 }
 
+// 导入已勾选微信记录
 async function importSelectedWechatItems() {
   const selectedItems = wechatCandidates
     .filter((item) => item.selected)
@@ -830,6 +870,7 @@ async function importSelectedWechatItems() {
   await refreshAll();
 }
 
+// 获取筛选条件
 function getFilters() {
   return {
     date_from: filterDateFrom.value || undefined,
@@ -844,6 +885,7 @@ function getFilters() {
   };
 }
 
+// 重置筛选条件
 function resetFilters() {
   filterDateFrom.value = "";
   filterDateTo.value = "";
@@ -856,20 +898,24 @@ function resetFilters() {
   sortOrder.value = "desc";
 }
 
+// 显示筛选弹窗
 function showFilterPopup() {
   filterPopup.hidden = !filterPopup.hidden;
 }
 
+// 隐藏筛选弹窗
 function hideFilterPopup() {
   filterPopup.hidden = true;
 }
 
+// 预算状态标签
 function levelLabel(level) {
   if (level === "over") return "已超支";
   if (level === "warning") return "预警";
   return "正常";
 }
 
+// 渲染预算状态
 function renderBudgetStatus(status) {
   budgetOverview.innerHTML = "";
   budgetList.innerHTML = "";
@@ -917,6 +963,7 @@ function renderBudgetStatus(status) {
   budgetList.appendChild(table);
 }
 
+// 加载预算状态
 async function loadBudgetStatus() {
   const month = budgetMonthInput.value || getCurrentMonth();
   budgetMonthInput.value = month;
@@ -932,6 +979,7 @@ async function loadBudgetStatus() {
   budgetStatus.textContent = `预算状态已更新：${month}`;
 }
 
+// 添加/更新分类预算草稿
 function upsertBudgetCategoryDraft() {
   const category = budgetCategorySelect.value;
   const amount = Number(budgetCategoryAmountInput.value);
@@ -945,6 +993,7 @@ function upsertBudgetCategoryDraft() {
   return true;
 }
 
+// 保存预算
 async function saveBudget() {
   const month = budgetMonthInput.value || getCurrentMonth();
   budgetMonthInput.value = month;
@@ -965,6 +1014,7 @@ async function saveBudget() {
   await loadBudgetStatus();
 }
 
+// 导出备份
 async function downloadBackup() {
   backupStatus.textContent = "正在导出备份...";
   const resp = await fetch(`${API_BASE}/backup/export`);
@@ -988,6 +1038,7 @@ async function downloadBackup() {
   backupStatus.textContent = `备份导出成功：${filename}`;
 }
 
+// 恢复备份
 async function restoreBackup() {
   const file = backupFileInput.files?.[0];
   if (!file) {
@@ -1007,6 +1058,7 @@ async function restoreBackup() {
   await loadBudgetStatus();
 }
 
+// 刷新所有数据
 async function refreshAll() {
   const query = buildQuery(getFilters());
   const [txns, expenseStats, monthlyStats] = await Promise.all([
@@ -1028,6 +1080,7 @@ async function refreshAll() {
   }
 }
 
+// 初始化分类选项
 async function initCategoryOptions() {
   const categories = await request("/categories");
   categoryOptions = categories;
@@ -1111,6 +1164,7 @@ alipayImportBtn.addEventListener("click", importSelectedAlipayItems);
 wechatPreviewBtn.addEventListener("click", runWechatPreview);
 wechatImportBtn.addEventListener("click", importSelectedWechatItems);
 
+// 启动入口
 async function bootstrap() {
   hideFilterPopup();
   form.elements.txn_date.value = getCurrentDate();
