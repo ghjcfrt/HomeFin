@@ -1,6 +1,10 @@
 @echo off
 setlocal
 
+REM 临时切换到 UTF-8，减少 CMD 中文乱码
+for /f "tokens=2 delims=: " %%a in ('chcp') do set "_OLD_CP=%%a"
+chcp 65001 >nul
+
 REM 设置项目关键目录与 Python 虚拟环境解释器
 set "ROOT_DIR=%~dp0"
 set "BACKEND_DIR=%ROOT_DIR%backend"
@@ -42,4 +46,5 @@ echo 前端地址:  http://localhost:5500
 echo.
 echo 已打开两个新的终端窗口。关闭它们即可停止服务。
 
+if defined _OLD_CP chcp %_OLD_CP% >nul
 endlocal
