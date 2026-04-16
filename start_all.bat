@@ -1,4 +1,4 @@
-@echo off
+@echo on
 chcp 65001 >nul
 setlocal
 
@@ -8,9 +8,10 @@ chcp 65001 >nul
 
 REM 设置项目关键目录与 Python 虚拟环境解释器
 set "ROOT_DIR=%~dp0"
-set "BACKEND_DIR=%ROOT_DIR%backend"
-set "FRONTEND_DIR=%ROOT_DIR%frontend"
-set "VENV_PY=%ROOT_DIR%.venv\Scripts\python.exe"
+if "%ROOT_DIR:~-1%"=="\" set "ROOT_DIR=%ROOT_DIR:~0,-1%"
+set "BACKEND_DIR=%ROOT_DIR%\backend"
+set "FRONTEND_DIR=%ROOT_DIR%\frontend"
+set "VENV_PY=%ROOT_DIR%\.venv\Scripts\python.exe"
 
 echo 正在启动 HomeFin 本地测试环境...
 
@@ -28,24 +29,29 @@ if not exist "%FRONTEND_DIR%\index.html" (
 )
 
 
-REM 检查虚拟环境路径是否包含中文字符
-echo %ROOT_DIR% | findstr /r /c:"[一-龥]" >nul
-if not errorlevel 1 (
-  echo [ERROR] 路径 "%ROOT_DIR%" 含有中文字符，无法创建虚拟环境，请将项目放在无中文路径下。
-  pause
-  exit /b 1
-)
+REM 检查路径是否包含中文
+powershell -NoProfile -Command "$p='%ROOT_DIR%'; if ($p -match '[\u4e00-\u9fa5]') { exit 1 } else { exit 0 }"
+
+if %errorlevel% NEQ 0 goto has_cn
+goto no_cn
+
+:has_cn
+echo [ERROR] 路径 "%ROOT_DIR%" 含有中文字符
+pause
+exit /b 1
+
+:no_cn
 
 if not exist "%VENV_PY%" (
-  echo [INFO] 正在创建虚拟环境："%ROOT_DIR%.venv"
-  python -m venv "%ROOT_DIR%.venv"
+  echo [INFO] 正在创建虚拟环境："%ROOT_DIR%\.venv"
+  python -m venv "%ROOT_DIR%\.venv"
 )
 
 REM 检测用户地区，自动切换 pip 源
 
 REM 通过外网IP判断是否在中国大陆
 set "PIP_INDEX_URL="
-for /f "delims=" %%i in ('powershell -Command "try { (Invoke-RestMethod -Uri 'https://ipinfo.io/json' -UseBasicParsing).country } catch { '' }"") do set "_COUNTRY=%%i"
+for /f "delims=" %%i in ('powershell -NoProfile -Command "try { (Invoke-RestMethod -Uri ''https://ipinfo.io/json'' -UseBasicParsing).country } catch { '''' }"') do set "_COUNTRY=%%i"
 if /i "%_COUNTRY%"=="CN" set "PIP_INDEX_URL=--index-url https://mirrors.aliyun.com/pypi/simple/"
 
 
